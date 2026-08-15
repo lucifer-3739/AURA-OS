@@ -69,13 +69,16 @@ export function useWebSocket() {
     }
   }, []);
 
-  // Stop active speech playback
+  // Stop active speech playback and cancel running task
   const interruptSpeaking = useCallback(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
     fetch('/api/voice/interrupt', { method: 'POST' }).catch(() => {});
-    addLog('Interrupted speech playback', 'warn');
+    fetch('/api/tasks/cancel', { method: 'POST' }).catch(() => {});
+    setAgentState('CANCELLED');
+    setPartialTranscript('');
+    addLog('Task and speech execution stopped by user', 'warn');
   }, [addLog]);
 
   // Send Command to Backend Orchestrator

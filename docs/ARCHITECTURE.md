@@ -17,7 +17,7 @@ Microphone → Audio Capture → Wake-Word Detection → STT → Command Normali
 
 ### 2. Voice Interaction Subsystem (`agent/voice/`)
 * **Audio**: Microphones discovery (`GET /api/audio/devices`), volume meter & VAD, playback controller & speech interruption.
-* **Wake Word**: Keyword detector (`"Hey Aura"`).
+* **Wake Word**: Keyword detector (`"Aura"`).
 * **Speech-to-Text**: STT engine with streaming partials and Web Speech API browser mic integration.
 * **Text-to-Speech**: TTS synthesis output & browser speech synthesis playback.
 * **Fast-Path Interruption Layer**: Instant evaluation for "stop talking", "cancel task", and voice permission confirmations ("yes"/"no").

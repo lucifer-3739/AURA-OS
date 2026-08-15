@@ -197,11 +197,11 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
             flex: 1,
             padding: '8px 10px',
             borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-color)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--accent-amber)',
+            border: '1px solid rgba(244, 63, 94, 0.4)',
+            background: 'rgba(244, 63, 94, 0.2)',
+            color: 'var(--accent-rose)',
             fontSize: '11px',
-            fontWeight: '600',
+            fontWeight: '700',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -209,7 +209,7 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
             gap: '4px'
           }}
         >
-          <VolumeX size={14} /> Stop
+          <VolumeX size={14} /> STOP ALL
         </button>
 
         <button

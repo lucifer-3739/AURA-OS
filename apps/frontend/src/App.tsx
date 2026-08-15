@@ -102,7 +102,7 @@ export const App: React.FC = () => {
               Quick Action Prompts
             </h3>
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Say <strong>"Hey Aura"</strong> or click any suggestion below to issue commands via text or voice pipeline.
+              Say <strong>"Aura"</strong> or click any suggestion below to issue commands via text or voice pipeline.
             </p>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button onClick={() => handleSuggestion('Open VS Code.')} style={pillStyle}>
@@ -144,7 +144,7 @@ export const App: React.FC = () => {
             type="text"
             value={inputCommand}
             onChange={(e) => setInputCommand(e.target.value)}
-            placeholder='Say "Hey Aura..." or type a natural language command here...'
+            placeholder='Say "Aura..." or type a natural language command here...'
             style={{
               flex: 1,
               background: 'transparent',

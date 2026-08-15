@@ -182,7 +182,8 @@ async def unmute_voice():
 @app.post("/api/voice/interrupt")
 async def interrupt_speech():
     playback_controller.stop_speaking()
-    return {"success": True, "message": "Speech output interrupted"}
+    await orchestrator.cancel_task()
+    return {"success": True, "message": "Speech playback and active task cancelled"}
 
 @app.post("/api/voice/test")
 async def test_voice_command():
@@ -239,8 +240,9 @@ async def get_task_by_id(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
+@app.post("/api/tasks/cancel")
 @app.post("/api/tasks/{task_id}/cancel")
-async def cancel_task(task_id: str):
+async def cancel_task(task_id: str = ""):
     playback_controller.stop_speaking()
     await orchestrator.cancel_task()
     return {"success": True, "task_id": task_id, "state": orchestrator.current_state.value}
