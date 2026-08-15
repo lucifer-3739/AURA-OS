@@ -17,6 +17,7 @@ async def test_end_to_end_voice_command_flow():
     tts = MockTTSProvider()
 
     # 2. Simulate Wake Word Detection
+    wake_word.trigger_once()
     detected = await wake_word.listen_for_wakeword("Aura")
     assert detected is True
 

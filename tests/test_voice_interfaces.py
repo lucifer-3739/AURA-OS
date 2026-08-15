@@ -7,6 +7,7 @@ from agent.voice.audio import device_manager
 @pytest.mark.asyncio
 async def test_wake_word_provider_interface():
     provider = MockWakeWordProvider()
+    provider.trigger_once()
     triggered = await provider.listen_for_wakeword("Aura", sensitivity=0.5)
     assert triggered is True
 

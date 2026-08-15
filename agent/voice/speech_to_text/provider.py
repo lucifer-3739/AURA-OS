@@ -7,7 +7,7 @@ from agent.config import settings
 logger = logging.getLogger("AURA_OS.STT")
 
 class MockSTTProvider(SpeechToTextProvider):
-    def __init__(self, default_transcript: str = "Open Visual Studio Code."):
+    def __init__(self, default_transcript: str = ""):
         self.preset_transcript: str = default_transcript
 
     def set_transcript(self, transcript: str):
@@ -18,6 +18,10 @@ class MockSTTProvider(SpeechToTextProvider):
         return self.preset_transcript
 
     async def transcribe_stream(self, audio_chunk: bytes) -> AsyncGenerator[Dict[str, Any], None]:
+        if not self.preset_transcript.strip():
+            yield {"text": "", "final": True}
+            return
+        
         words = self.preset_transcript.split()
         partial = ""
         for i, word in enumerate(words):
@@ -31,19 +35,19 @@ class LocalSTTProvider(SpeechToTextProvider):
     async def transcribe(self, audio_bytes: bytes, language: str = "en-US") -> str:
         logger.info(f"Local STT transcribing audio chunk (Language: {language})")
         await asyncio.sleep(0.3)
-        return "Open Chrome."
+        return ""
 
     async def transcribe_stream(self, audio_chunk: bytes) -> AsyncGenerator[Dict[str, Any], None]:
-        yield {"text": "Open Chrome.", "final": True}
+        yield {"text": "", "final": True}
 
 class CloudSTTProvider(SpeechToTextProvider):
     """Cloud Speech-to-Text framework placeholder."""
     async def transcribe(self, audio_bytes: bytes, language: str = "en-US") -> str:
         await asyncio.sleep(0.3)
-        return "Search the web for React documentation."
+        return ""
 
     async def transcribe_stream(self, audio_chunk: bytes) -> AsyncGenerator[Dict[str, Any], None]:
-        yield {"text": "Search the web for React documentation.", "final": True}
+        yield {"text": "", "final": True}
 
 def get_stt_provider() -> SpeechToTextProvider:
     if settings.stt_provider == "local":
