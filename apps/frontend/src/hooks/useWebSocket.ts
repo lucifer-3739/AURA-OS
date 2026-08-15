@@ -37,9 +37,14 @@ export function useWebSocket() {
   const [partialTranscript, setPartialTranscript] = useState<string>('');
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isListeningVoice, setIsListeningVoice] = useState<boolean>(false);
+  const [micPermissionGranted, setMicPermissionGranted] = useState<boolean>(false);
+  const [micVolume, setMicVolume] = useState<number>(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const recognitionRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const shouldListenRef = useRef<boolean>(true);
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
     setLogs((prev) => [
@@ -92,7 +97,53 @@ export function useWebSocket() {
     }
   }, [addLog]);
 
-  // Initialize Browser Microphone Speech Recognition (Web Speech API)
+  // Explicit User-Triggered Microphone Permission & Initialization
+  const requestMicAccess = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        addLog('Microphone API not supported on this browser context (requires HTTPS or localhost).', 'error');
+        return false;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      setMicPermissionGranted(true);
+      addLog('Microphone permission granted successfully!', 'success');
+
+      // Audio Level Analyzer
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = audioCtx;
+        const analyzer = audioCtx.createAnalyser();
+        analyzer.fftSize = 256;
+        const source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyzer);
+
+        const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+        const updateVolume = () => {
+          if (micStreamRef.current && micStreamRef.current.active) {
+            analyzer.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              sum += dataArray[i];
+            }
+            const average = sum / dataArray.length;
+            setMicVolume(Math.min(100, Math.round((average / 128) * 100)));
+            requestAnimationFrame(updateVolume);
+          }
+        };
+        updateVolume();
+      } catch (e) {}
+
+      return true;
+    } catch (err: any) {
+      addLog(`Microphone access error: ${err.message}. Please allow mic permission in browser.`, 'error');
+      setMicPermissionGranted(false);
+      return false;
+    }
+  }, [addLog]);
+
+  // Initialize Speech Recognition
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -103,7 +154,7 @@ export function useWebSocket() {
 
       recognition.onstart = () => {
         setIsListeningVoice(true);
-        addLog('Microphone listening active. Speak into your mic...', 'info');
+        addLog('Voice recognition active. Speak clearly into your mic...', 'info');
       };
 
       recognition.onresult = (event: any) => {
@@ -126,9 +177,8 @@ export function useWebSocket() {
         if (finalText.trim()) {
           const cleanCmd = finalText.trim();
           setPartialTranscript(cleanCmd);
-          addLog(`Voice Picked Up: "${cleanCmd}"`, 'success');
+          addLog(`Voice Recognized: "${cleanCmd}"`, 'success');
 
-          // Check fast-path voice interruptions
           const lower = cleanCmd.toLowerCase();
           if (lower.includes('stop talking') || lower.includes('be quiet') || lower.includes('shut up')) {
             interruptSpeaking();
@@ -141,20 +191,20 @@ export function useWebSocket() {
       };
 
       recognition.onerror = (event: any) => {
-        if (event.error !== 'no-speech') {
-          console.warn('Speech recognition status:', event.error);
+        if (event.error === 'not-allowed') {
+          addLog('Microphone permission blocked by browser. Click "Enable Mic" to grant permission.', 'warn');
+          setMicPermissionGranted(false);
+        } else if (event.error !== 'no-speech') {
+          console.warn('Speech recognition error event:', event.error);
         }
       };
 
       recognition.onend = () => {
         setIsListeningVoice(false);
-        // Auto-restart if not muted
-        if (!isMuted && recognitionRef.current) {
+        if (shouldListenRef.current && !isMuted) {
           try {
             recognition.start();
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) {}
         }
       };
 
@@ -163,14 +213,13 @@ export function useWebSocket() {
         recognition.start();
       } catch (e) {}
     } else {
-      addLog('Browser Web Speech API not supported in this browser. Use Chrome/Edge/Brave for microphone input.', 'warn');
+      addLog('Web Speech API not supported in this browser. Use Chrome/Edge for voice recognition.', 'warn');
     }
 
     return () => {
+      shouldListenRef.current = false;
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
+        try { recognitionRef.current.stop(); } catch (e) {}
       }
     };
   }, [addLog, isMuted, sendCommand, interruptSpeaking]);
@@ -189,7 +238,7 @@ export function useWebSocket() {
 
       socket.onopen = () => {
         setIsConnected(true);
-        addLog('Connected to AURA OS Voice & Shell Engine', 'info');
+        addLog('Connected to AURA OS Engine', 'info');
       };
 
       socket.onmessage = (event) => {
@@ -285,6 +334,7 @@ export function useWebSocket() {
   const toggleMute = async () => {
     const nextMute = !isMuted;
     setIsMuted(nextMute);
+    shouldListenRef.current = !nextMute;
     
     if (recognitionRef.current) {
       if (nextMute) {
@@ -315,6 +365,9 @@ export function useWebSocket() {
     partialTranscript,
     isMuted,
     isListeningVoice,
+    micPermissionGranted,
+    micVolume,
+    requestMicAccess,
     sendCommand,
     approvePermission,
     rejectPermission,

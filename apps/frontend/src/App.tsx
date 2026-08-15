@@ -22,6 +22,9 @@ export const App: React.FC = () => {
     partialTranscript,
     isMuted,
     isListeningVoice,
+    micPermissionGranted,
+    micVolume,
+    requestMicAccess,
     sendCommand,
     approvePermission,
     rejectPermission,
@@ -67,7 +70,7 @@ export const App: React.FC = () => {
               AURA OS
             </h1>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              AI-Native Voice-Controlled Computer Agent • Phase 2
+              AI-Native Voice-Controlled Computer Agent • Phase 3
             </span>
           </div>
         </div>
@@ -85,6 +88,9 @@ export const App: React.FC = () => {
           partialTranscript={partialTranscript}
           isMuted={isMuted}
           isListeningVoice={isListeningVoice}
+          micPermissionGranted={micPermissionGranted}
+          micVolume={micVolume}
+          onRequestMicAccess={requestMicAccess}
           onToggleMute={toggleMute}
           onInterrupt={interruptSpeaking}
           onTestVoice={testVoice}
