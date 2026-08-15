@@ -1,10 +1,11 @@
 ======================================================================
-                     AURA OS — HOW TO RUN GUIDE (PHASE 2)
+                     AURA OS — HOW TO RUN GUIDE
 ======================================================================
 
 PREREQUISITES:
 - Python 3.10+ (configured in venv)
 - Node.js 18+ & npm
+- Git
 
 ----------------------------------------------------------------------
 1. RUN THE BACKEND AGENT SHELL & VOICE ENGINE (FastAPI)
@@ -37,7 +38,7 @@ The web desktop interface will open at:
 ----------------------------------------------------------------------
 3. RUN UNIT & INTEGRATION TESTS
 ----------------------------------------------------------------------
-To run the automated test suite (18 test suites covering tools, permissions, state machine, voice pipeline, interruptions, and E2E integration):
+To run the automated test suite (18 test suites):
 
 Command:
   .\venv\Scripts\pytest
@@ -64,4 +65,20 @@ C. UI Voice Controls:
    - Click "Test Voice" in the UI to trigger a simulated end-to-end voice command run.
    - Click "Mute Mic" to toggle microphone mute.
    - Click "Stop Speech" to interrupt speech playback.
+
+
+----------------------------------------------------------------------
+5. GIT WORKFLOW & PUSHING A NEW BRANCH TO GITHUB
+----------------------------------------------------------------------
+To create a new branch and push your code to GitHub:
+
+1. Create and switch to a new branch:
+   git checkout -b feature/voice-interaction
+
+2. Stage and commit your changes:
+   git add .
+   git commit -m "Update run.txt and voice features"
+
+3. Push the new branch to GitHub:
+   git push -u origin feature/voice-interaction
 ======================================================================
