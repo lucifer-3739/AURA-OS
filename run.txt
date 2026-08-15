@@ -1,0 +1,67 @@
+======================================================================
+                     AURA OS — HOW TO RUN GUIDE (PHASE 2)
+======================================================================
+
+PREREQUISITES:
+- Python 3.10+ (configured in venv)
+- Node.js 18+ & npm
+
+----------------------------------------------------------------------
+1. RUN THE BACKEND AGENT SHELL & VOICE ENGINE (FastAPI)
+----------------------------------------------------------------------
+Open Terminal #1 in the root folder (`d:\Code\AURA OS`):
+
+Command:
+  .\venv\Scripts\python apps/shell/main.py
+
+The backend server & voice pipeline will start at:
+  - REST API: http://127.0.0.1:8000
+  - WebSocket: ws://127.0.0.1:8000/api/ws
+  - Audio Devices API: http://127.0.0.1:8000/api/audio/devices
+  - API Documentation: http://127.0.0.1:8000/docs
+
+
+----------------------------------------------------------------------
+2. RUN THE REACT DESKTOP VOICE FRONTEND (Vite)
+----------------------------------------------------------------------
+Open Terminal #2 in the frontend folder (`d:\Code\AURA OS\apps\frontend`):
+
+Commands:
+  cd apps/frontend
+  npm run dev
+
+The web desktop interface will open at:
+  - Web UI: http://localhost:3000
+
+
+----------------------------------------------------------------------
+3. RUN UNIT & INTEGRATION TESTS
+----------------------------------------------------------------------
+To run the automated test suite (18 test suites covering tools, permissions, state machine, voice pipeline, interruptions, and E2E integration):
+
+Command:
+  .\venv\Scripts\pytest
+
+Or run the standalone runner:
+  .\venv\Scripts\python scripts/run_tests.py
+
+
+----------------------------------------------------------------------
+4. TESTING VOICE INTERACTION & COMMANDS
+----------------------------------------------------------------------
+A. Voice Interaction via Microphone:
+   1. Say "Hey Aura" to trigger the wake-word listener.
+   2. Speak your command: "Open Visual Studio Code."
+   3. Observe live transcript streaming and state progression:
+      WAITING_FOR_WAKE_WORD -> WAKE_WORD_DETECTED -> LISTENING -> PROCESSING_SPEECH -> THINKING -> EXECUTING -> SPEAKING.
+
+B. Fast-Path Interruption Commands:
+   - Say "Stop talking" to halt TTS speech output instantly.
+   - Say "Cancel task" to cancel the active task.
+   - Say "Yes" / "No" to approve/reject pending security permission requests.
+
+C. UI Voice Controls:
+   - Click "Test Voice" in the UI to trigger a simulated end-to-end voice command run.
+   - Click "Mute Mic" to toggle microphone mute.
+   - Click "Stop Speech" to interrupt speech playback.
+======================================================================
