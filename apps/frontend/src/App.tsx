@@ -20,6 +20,7 @@ export const App: React.FC = () => {
     logs,
     partialTranscript,
     isMuted,
+    isListeningVoice,
     sendCommand,
     approvePermission,
     rejectPermission,
@@ -82,6 +83,7 @@ export const App: React.FC = () => {
           agentState={agentState}
           partialTranscript={partialTranscript}
           isMuted={isMuted}
+          isListeningVoice={isListeningVoice}
           onToggleMute={toggleMute}
           onInterrupt={interruptSpeaking}
           onTestVoice={testVoice}

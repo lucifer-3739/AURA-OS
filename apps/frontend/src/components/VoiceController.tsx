@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, VolumeX, Radio, Sparkles, Settings2, Play } from 'lucide-react';
+import { Mic, MicOff, VolumeX, Radio, Sparkles, Play } from 'lucide-react';
 
 interface VoiceControllerProps {
   agentState: string;
   partialTranscript: string;
   isMuted: boolean;
+  isListeningVoice?: boolean;
   onToggleMute: () => void;
   onInterrupt: () => void;
   onTestVoice: () => void;
@@ -14,6 +15,7 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
   agentState,
   partialTranscript,
   isMuted,
+  isListeningVoice = false,
   onToggleMute,
   onInterrupt,
   onTestVoice,
@@ -38,10 +40,12 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ device_id: devId }),
-    });
+    }).catch(() => {});
   };
 
   const getOrbColor = () => {
+    if (isMuted) return 'rgba(244, 63, 94, 0.4)';
+    if (isListeningVoice) return 'rgba(16, 185, 129, 0.9)';
     switch (agentState) {
       case 'WAITING_FOR_WAKE_WORD': return 'rgba(0, 229, 255, 0.4)';
       case 'WAKE_WORD_DETECTED':
@@ -51,11 +55,9 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
       case 'SPEAKING': return 'rgba(236, 72, 153, 0.8)';
       case 'INTERRUPTED': return 'rgba(245, 158, 11, 0.8)';
       case 'ERROR': return 'rgba(244, 63, 94, 0.8)';
-      default: return 'rgba(100, 116, 139, 0.4)';
+      default: return 'rgba(0, 229, 255, 0.5)';
     }
   };
-
-  const isSpeaking = agentState === 'SPEAKING';
 
   return (
     <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -63,7 +65,7 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Radio size={18} color="var(--accent-cyan)" />
           <h3 style={{ fontSize: '15px', fontWeight: '600', fontFamily: 'var(--font-heading)' }}>
-            Voice Control Pipeline
+            Live Voice Controller
           </h3>
         </div>
 
@@ -91,13 +93,13 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
       </div>
 
       {/* Center Voice Orb Visualizer */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 0' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 0' }}>
         <div
           style={{
-            width: '72px',
-            height: '72px',
+            width: '76px',
+            height: '76px',
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${getOrbColor()} 0%, transparent 70%)`,
+            background: `radial-gradient(circle, ${getOrbColor()} 0%, transparent 75%)`,
             boxShadow: `0 0 35px ${getOrbColor()}`,
             display: 'flex',
             alignItems: 'center',
@@ -105,15 +107,17 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
             transition: 'all 0.3s ease'
           }}
         >
-          <Sparkles size={28} color="#fff" />
+          {isMuted ? <MicOff size={28} color="var(--accent-rose)" /> : <Mic size={28} color="#fff" />}
         </div>
 
         <div style={{ marginTop: '12px', textAlign: 'center' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Wake Word: <strong style={{ color: 'var(--accent-cyan)' }}>"Hey Aura"</strong>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Status: <strong style={{ color: isMuted ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
+              {isMuted ? 'Mic Muted' : isListeningVoice ? 'Listening Live to your Voice...' : 'Mic Active'}
+            </strong>
           </span>
           {partialTranscript && (
-            <div style={{ marginTop: '8px', fontSize: '14px', fontWeight: '500', color: 'var(--accent-cyan)', fontStyle: 'italic' }}>
+            <div style={{ marginTop: '8px', fontSize: '13px', fontWeight: '500', color: 'var(--accent-cyan)', fontStyle: 'italic' }}>
               "{partialTranscript}"
             </div>
           )}
@@ -141,22 +145,21 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
           }}
         >
           {isMuted ? <MicOff size={14} /> : <Mic size={14} />}
-          {isMuted ? 'Mic Muted' : 'Mute Mic'}
+          {isMuted ? 'Unmute Mic' : 'Mute Mic'}
         </button>
 
         <button
           onClick={onInterrupt}
-          disabled={!isSpeaking}
           style={{
             flex: 1,
             padding: '8px 12px',
             borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--border-color)',
-            background: isSpeaking ? 'rgba(245, 158, 11, 0.2)' : 'var(--bg-secondary)',
-            color: isSpeaking ? 'var(--accent-amber)' : 'var(--text-muted)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--accent-amber)',
             fontSize: '12px',
             fontWeight: '600',
-            cursor: isSpeaking ? 'pointer' : 'default',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -182,7 +185,7 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
             gap: '6px'
           }}
         >
-          <Play size={14} /> Test Voice
+          <Play size={14} /> Test Command
         </button>
       </div>
     </div>

@@ -24,7 +24,7 @@ export interface LogEntry {
   message: string;
 }
 
-export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
+export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [agentState, setAgentState] = useState<string>('IDLE');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -33,11 +33,13 @@ export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [systemStats, setSystemStats] = useState<Record<string, any>>({});
 
-  // Voice State (Phase 2)
+  // Voice State (Phase 2 Real Microphone + Speech Synthesis)
   const [partialTranscript, setPartialTranscript] = useState<string>('');
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isListeningVoice, setIsListeningVoice] = useState<boolean>(false);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
     setLogs((prev) => [
@@ -51,11 +53,138 @@ export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
     ]);
   }, []);
 
+  // Speak text response via browser SpeechSynthesis
+  const speakText = useCallback((text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // stop previous speech
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, []);
+
+  // Stop active speech playback
+  const interruptSpeaking = useCallback(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    fetch('/api/voice/interrupt', { method: 'POST' }).catch(() => {});
+    addLog('Interrupted speech playback', 'warn');
+  }, [addLog]);
+
+  // Send Command to Backend Orchestrator
+  const sendCommand = useCallback(async (command: string) => {
+    try {
+      addLog(`Command: "${command}"`, 'info');
+      setAgentState('UNDERSTANDING');
+      
+      const res = await fetch('/api/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command }),
+      });
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      addLog(`Failed to communicate with engine: ${err.message}`, 'error');
+      setAgentState('ERROR');
+    }
+  }, [addLog]);
+
+  // Initialize Browser Microphone Speech Recognition (Web Speech API)
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListeningVoice(true);
+        addLog('Microphone listening active. Speak into your mic...', 'info');
+      };
+
+      recognition.onresult = (event: any) => {
+        let interimText = '';
+        let finalText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalText += transcript;
+          } else {
+            interimText += transcript;
+          }
+        }
+
+        if (interimText) {
+          setPartialTranscript(interimText);
+        }
+
+        if (finalText.trim()) {
+          const cleanCmd = finalText.trim();
+          setPartialTranscript(cleanCmd);
+          addLog(`Voice Picked Up: "${cleanCmd}"`, 'success');
+
+          // Check fast-path voice interruptions
+          const lower = cleanCmd.toLowerCase();
+          if (lower.includes('stop talking') || lower.includes('be quiet') || lower.includes('shut up')) {
+            interruptSpeaking();
+          } else if (lower.includes('cancel task') || lower === 'cancel') {
+            fetch('/api/tasks/cancel', { method: 'POST' }).catch(() => {});
+          } else {
+            sendCommand(cleanCmd);
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        if (event.error !== 'no-speech') {
+          console.warn('Speech recognition status:', event.error);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListeningVoice(false);
+        // Auto-restart if not muted
+        if (!isMuted && recognitionRef.current) {
+          try {
+            recognition.start();
+          } catch (e) {
+            // ignore
+          }
+        }
+      };
+
+      recognitionRef.current = recognition;
+      try {
+        recognition.start();
+      } catch (e) {}
+    } else {
+      addLog('Browser Web Speech API not supported in this browser. Use Chrome/Edge/Brave for microphone input.', 'warn');
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, [addLog, isMuted, sendCommand, interruptSpeaking]);
+
+  // WebSocket Connection Lifecycle
   useEffect(() => {
     let socket: WebSocket;
+    let reconnectTimeout: any;
 
     const connect = () => {
-      socket = new WebSocket(url);
+      const hostname = window.location.hostname || '127.0.0.1';
+      const wsUrl = `ws://${hostname}:8000/api/ws`;
+
+      socket = new WebSocket(wsUrl);
       wsRef.current = socket;
 
       socket.onopen = () => {
@@ -78,30 +207,12 @@ export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
 
             case 'state_change':
               addLog(`State changed to: ${state}`, 'info');
+              if (state === 'COMPLETED') {
+                speakText('Task completed successfully.');
+              }
               if (state === 'IDLE' || state === 'COMPLETED' || state === 'FAILED' || state === 'CANCELLED') {
                 setPermissionReq(null);
                 setPartialTranscript('');
-              }
-              break;
-
-            case 'wake_word_detected':
-              addLog('Wake word "Hey Aura" detected! Listening for user command...', 'success');
-              break;
-
-            case 'speech_partial':
-              if (data?.text) setPartialTranscript(data.text);
-              break;
-
-            case 'speech_final':
-              if (data?.text) {
-                setPartialTranscript(data.text);
-                addLog(`Voice Recognized: "${data.text}"`, 'info');
-              }
-              break;
-
-            case 'ai_response_started':
-              if (data?.text) {
-                addLog(`AURA TTS Output: "${data.text}"`, 'info');
               }
               break;
 
@@ -121,6 +232,7 @@ export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
             case 'permission_required':
               setPermissionReq(data);
               addLog(`Action requires permission confirmation: Risk Level [${data?.risk_level}]`, 'warn');
+              speakText('Security permission required for this action.');
               break;
 
             case 'system_stats':
@@ -134,35 +246,21 @@ export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
 
       socket.onclose = () => {
         setIsConnected(false);
-        addLog('Disconnected from AURA OS Engine. Retrying...', 'warn');
-        setTimeout(connect, 3000);
+        reconnectTimeout = setTimeout(connect, 3000);
       };
 
-      socket.onerror = (err) => {
-        console.error('WebSocket Error:', err);
+      socket.onerror = () => {
+        setIsConnected(false);
       };
     };
 
     connect();
 
     return () => {
+      clearTimeout(reconnectTimeout);
       if (socket) socket.close();
     };
-  }, [url, addLog]);
-
-  const sendCommand = async (command: string) => {
-    try {
-      addLog(`User command: "${command}"`, 'info');
-      const res = await fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command }),
-      });
-      return await res.json();
-    } catch (err: any) {
-      addLog(`Failed to send command: ${err.message}`, 'error');
-    }
-  };
+  }, [addLog, speakText]);
 
   const approvePermission = async () => {
     try {
@@ -187,19 +285,23 @@ export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
   const toggleMute = async () => {
     const nextMute = !isMuted;
     setIsMuted(nextMute);
+    
+    if (recognitionRef.current) {
+      if (nextMute) {
+        try { recognitionRef.current.stop(); } catch(e){}
+      } else {
+        try { recognitionRef.current.start(); } catch(e){}
+      }
+    }
+
     const endpoint = nextMute ? '/api/voice/mute' : '/api/voice/unmute';
-    await fetch(endpoint, { method: 'POST' });
+    await fetch(endpoint, { method: 'POST' }).catch(() => {});
     addLog(nextMute ? 'Microphone muted' : 'Microphone unmuted', 'info');
   };
 
-  const interruptSpeaking = async () => {
-    await fetch('/api/voice/interrupt', { method: 'POST' });
-    addLog('Interrupted TTS speech playback', 'warn');
-  };
-
   const testVoice = async () => {
-    addLog('Triggered simulated voice pipeline test run...', 'info');
-    await fetch('/api/voice/test', { method: 'POST' });
+    addLog('Triggering test voice command...', 'info');
+    await sendCommand('Open Visual Studio Code.');
   };
 
   return {
@@ -212,6 +314,7 @@ export function useWebSocket(url: string = 'ws://127.0.0.1:8000/api/ws') {
     systemStats,
     partialTranscript,
     isMuted,
+    isListeningVoice,
     sendCommand,
     approvePermission,
     rejectPermission,
