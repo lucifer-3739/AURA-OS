@@ -10,94 +10,24 @@
 
 ---
 
-## 🌟 Architecture & Features
+## 🌟 Architecture & Capabilities
 
-### 1. Observe → Plan → Act → Verify Loop
-AURA OS uses a structured state machine cycle (`IDLE` → `WAITING_FOR_WAKE_WORD` → `LISTENING` → `PROCESSING_SPEECH` → `THINKING` → `PLANNING` → `WAITING_FOR_PERMISSION` → `EXECUTING` → `OBSERVING` → `VERIFYING` → `SPEAKING` → `COMPLETED`).
+### Phase 1: Local AI Command System
+* FastAPI backend shell and WebSocket task streaming engine (`apps/shell/`).
+* React 18 + TypeScript dark-mode desktop frontend (`apps/frontend/`).
+* SQLite memory engine (`agent/memory/`) and audit logger (`agent/security/audit.py`).
+* Risk-level permission engine (`agent/security/permissions.py`).
 
-### 2. Multi-Level Security Permission System
-* **Risk Levels**: `SAFE`, `MODERATE`, `DANGEROUS`, `CRITICAL`.
-* **Interactive Confirmations**: Dangerous operations pause execution and prompt the user via UI modal or voice ("Yes"/"No").
-* **Audit Trail**: Every tool invocation is logged into SQLite (`audit_log`) and structured system logs.
+### Phase 2: Voice Interaction Subsystem
+* Provider-independent voice interfaces (`WakeWordProvider`, `SpeechToTextProvider`, `TextToSpeechProvider`, `AudioCaptureProvider`).
+* Web Speech API real-time microphone voice recognition and speech synthesis output.
+* Fast-path interruption layer ("stop talking", "cancel task", "yes"/"no" permissions).
 
-### 3. Voice Interaction Subsystem (Phase 2)
-* **Provider Abstractions**: Decoupled interfaces for `WakeWordProvider`, `SpeechToTextProvider`, `TextToSpeechProvider`, and `AudioCaptureProvider`.
-* **Wake-Word Engine**: Default keyword `"Hey Aura"`.
-* **Fast-Path Interruption Layer**: Instant evaluation (< 50ms) for high-priority commands ("stop talking", "cancel task", "yes"/"no" permissions).
-* **Live Transcription Streaming**: Real-time partial & final transcription feed emitted over WebSockets.
-
-### 4. Tool Registry (`agent/tools/`)
-* **Filesystem**: `create_file`, `read_file`, `write_file`, `copy_file`, `move_file`, `delete_file`, `create_folder`, `search_files`, `list_directory`
-* **System**: `open_application`, `close_application`, `system_information`, `volume_control`, `shutdown`, `restart`
-* **Browser**: `open_url`, `search_web`, `download_file`
-* **Terminal**: `execute_command`, `get_command_output`
-* **Computer**: `screenshot`
-
----
-
-## 📁 Directory Structure
-
-```
-aura-os/
-├── .env.example
-├── .gitignore
-├── LICENSE
-├── README.md
-├── run.txt
-├── apps/
-│   ├── desktop/
-│   │   └── README.md              # Desktop shell placeholder (Phase 8)
-│   ├── frontend/                  # React 18 + TypeScript + Vite UI
-│   │   ├── src/
-│   │   │   ├── components/        # VoiceController, TaskMonitor, ConsoleLog, etc.
-│   │   │   ├── hooks/             # useWebSocket.ts
-│   │   │   └── App.tsx
-│   │   └── package.json
-│   └── shell/                     # FastAPI Backend Server
-│       ├── main.py
-│       └── requirements.txt
-├── agent/                         # Core Agent System
-│   ├── core/                      # Orchestrator, Planner, Executor, Verifier, Context
-│   ├── voice/                     # Audio, WakeWord, STT, TTS, VoicePipeline, Events
-│   ├── tools/                     # Tool Registry & Implementation Modules
-│   ├── memory/                    # SQLite Short-term, Long-term, Task Memory
-│   ├── security/                  # Permission Manager, Audit Logger, Sandbox
-│   ├── database/                  # SQLite async wrapper (db.py)
-│   └── config/                    # Global settings (settings.py)
-├── tests/                         # Automated Pytest Suite (18 tests)
-└── scripts/                       # Test runner scripts
-```
-
----
-
-## ⚙️ Environment Variables
-
-Copy `.env.example` to `.env`:
-
-```env
-AI_PROVIDER=mock          # Options: mock, gemini
-GEMINI_API_KEY=your_key   # Optional when using gemini provider
-DATABASE_PATH=aura_os.db
-LOG_LEVEL=INFO
-PERMISSION_MODE=interactive # interactive, strict, permissive
-HOST=127.0.0.1
-PORT=8000
-
-# Voice Settings
-VOICE_ENABLED=true
-WAKE_WORD_ENABLED=true
-WAKE_WORD=Aura
-WAKE_WORD_SENSITIVITY=0.5
-STT_PROVIDER=mock         # mock, local, cloud
-STT_LANGUAGE=en-US
-TTS_ENABLED=true
-TTS_PROVIDER=mock         # mock, local, cloud
-TTS_VOICE=default
-TTS_SPEED=1.0
-VOICE_SESSION_TIMEOUT=30
-VOICE_RECORDING_ENABLED=false
-MICROPHONE_DEVICE=default
-```
+### Phase 3: Browser Automation Subsystem
+* **Driver Abstraction (`agent/browser/`)**: `BrowserDriver` interface supporting `MockBrowserDriver` (zero-dependency offline driver) and `HeadlessBrowserDriver` (Playwright / Selenium).
+* **DOM Element Parser (`agent/browser/dom_parser.py`)**: Extracts structured interactive DOM element trees (`inputs`, `buttons`, `links`) and clean markdown text content.
+* **Registered Tools (`agent/tools/browser.py`)**: `open_url`, `search_web`, `click_element`, `type_text`, `read_page`, `extract_data`, `download_file`, `close_browser`.
+* **Browser Monitor UI (`apps/frontend/src/components/BrowserMonitor.tsx`)**: Renders tab URL header, active page title, extracted clean text content, and interactive DOM element inspector tree.
 
 ---
 
@@ -119,14 +49,14 @@ npm run dev
 
 ---
 
-## 🧪 Testing
+## 🧪 Running Tests
 
-Run the full automated Pytest suite (18 passed tests):
+Run the complete 24-suite Pytest suite (100% pass rate):
 ```bash
 .\venv\Scripts\pytest
 ```
 
-Or run the standalone runner:
+Or run the standalone test runner:
 ```bash
 .\venv\Scripts\python scripts/run_tests.py
 ```

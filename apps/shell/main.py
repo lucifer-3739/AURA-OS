@@ -28,11 +28,12 @@ from agent.voice import (
     tts_provider,
     playback_controller
 )
+from agent.browser import browser_driver
 
 app = FastAPI(
     title="AURA OS Shell API",
-    description="AI-Native Voice & Desktop Computer Agent Shell API",
-    version="0.2.0"
+    description="AI-Native Voice, Desktop & Browser Computer Agent Shell API",
+    version="0.3.0"
 )
 
 # Enable CORS for React Frontend
@@ -95,6 +96,18 @@ class MemoryRequest(BaseModel):
 
 class DeviceSelectRequest(BaseModel):
     device_id: str
+
+class BrowserNavigateRequest(BaseModel):
+    url: str
+
+class BrowserClickRequest(BaseModel):
+    selector: str = ""
+    text: str = ""
+
+class BrowserTypeRequest(BaseModel):
+    selector: str
+    text: str
+    press_enter: bool = True
 
 # REST Endpoints
 @app.post("/api/command")
@@ -191,6 +204,27 @@ async def get_voice_config():
         "tts_voice": settings.tts_voice,
         "voice_recording_enabled": settings.voice_recording_enabled
     }
+
+# Phase 3 Browser Automation APIs
+@app.get("/api/browser/state")
+async def get_browser_state():
+    return await browser_driver.get_page_content()
+
+@app.post("/api/browser/navigate")
+async def browser_navigate(req: BrowserNavigateRequest):
+    return await browser_driver.navigate(req.url)
+
+@app.post("/api/browser/click")
+async def browser_click(req: BrowserClickRequest):
+    return await browser_driver.click(req.selector, req.text)
+
+@app.post("/api/browser/type")
+async def browser_type(req: BrowserTypeRequest):
+    return await browser_driver.type_text(req.selector, req.text, req.press_enter)
+
+@app.post("/api/browser/close")
+async def browser_close():
+    return await browser_driver.close()
 
 # Memory & Tools APIs
 @app.get("/api/tasks")

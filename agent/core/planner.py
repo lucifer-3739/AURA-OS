@@ -82,6 +82,68 @@ class MockAIProvider(AIProvider):
                     "status": "pending"
                 }
             ]
+        elif "click" in req_lower:
+            target = request.replace("click", "").strip() or "Quick Start"
+            return [
+                {
+                    "id": 1,
+                    "description": f"Click element '{target}'",
+                    "tool_name": "click_element",
+                    "arguments": {"text": target},
+                    "status": "pending"
+                }
+            ]
+        elif "type" in req_lower:
+            typed_text = request.replace("type", "").strip() or "React hooks"
+            return [
+                {
+                    "id": 1,
+                    "description": f"Type '{typed_text}' into search field",
+                    "tool_name": "type_text",
+                    "arguments": {"selector": "#search", "text": typed_text, "press_enter": True},
+                    "status": "pending"
+                }
+            ]
+        elif "read page" in req_lower or "extract text" in req_lower:
+            return [
+                {
+                    "id": 1,
+                    "description": "Read active browser page content",
+                    "tool_name": "read_page",
+                    "arguments": {"max_length": 5000},
+                    "status": "pending"
+                }
+            ]
+        elif "extract data" in req_lower or "extract table" in req_lower:
+            return [
+                {
+                    "id": 1,
+                    "description": "Extract structured data matching selector",
+                    "tool_name": "extract_data",
+                    "arguments": {"selector": ".data-table"},
+                    "status": "pending"
+                }
+            ]
+        elif "download" in req_lower:
+            return [
+                {
+                    "id": 1,
+                    "description": "Download documentation file",
+                    "tool_name": "download_file",
+                    "arguments": {"url": "https://example.com/docs.pdf", "destination": "Projects/docs.pdf"},
+                    "status": "pending"
+                }
+            ]
+        elif "close browser" in req_lower:
+            return [
+                {
+                    "id": 1,
+                    "description": "Close browser session",
+                    "tool_name": "close_browser",
+                    "arguments": {},
+                    "status": "pending"
+                }
+            ]
         elif "screenshot" in req_lower:
             return [
                 {

@@ -6,6 +6,7 @@ import { ConsoleLog } from './components/ConsoleLog';
 import { PermissionPrompt } from './components/PermissionPrompt';
 import { SystemStats } from './components/SystemStats';
 import { VoiceController } from './components/VoiceController';
+import { BrowserMonitor } from './components/BrowserMonitor';
 import { Send, Mic, Sparkles, FolderPlus, Search, Command, Shield } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -119,9 +120,10 @@ export const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid: Task Progress Monitor + Console Audit Logs */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', flex: 1, minHeight: '340px' }}>
+      {/* Main Grid: Task Progress Monitor + Browser Monitor + Console Audit Logs */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', flex: 1, minHeight: '340px' }}>
         <TaskMonitor plan={currentPlan} currentTaskId={currentTaskId} />
+        <BrowserMonitor />
         <ConsoleLog logs={logs} />
       </div>
 

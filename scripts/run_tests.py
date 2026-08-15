@@ -20,10 +20,13 @@ from tests.test_voice_interfaces import (
 from tests.test_voice_pipeline import test_audio_capture_and_mute, test_playback_interruption, test_voice_session_context
 from tests.test_voice_interruption import test_fast_path_stop_talking, test_fast_path_cancel_task, test_voice_permission_confirmation
 from tests.test_voice_integration import test_end_to_end_voice_command_flow
+from tests.test_browser_driver import test_browser_driver_navigation, test_browser_driver_dom_parsing, test_browser_driver_click_and_type
+from tests.test_browser_tools import test_browser_registered_tools, test_browser_tool_executions
+from tests.test_browser_integration import test_end_to_end_browser_automation_flow
 
 async def run_all_tests():
     print("==================================================")
-    print("        AURA OS SYSTEM TEST SUITE (PHASE 2)       ")
+    print("        AURA OS SYSTEM TEST SUITE (PHASE 3)       ")
     print("==================================================")
 
     # 1. State machine & Permissions
@@ -31,7 +34,7 @@ async def run_all_tests():
     test_permission_risk_levels()
     print("[PASS] State machine & permission evaluation tests passed.")
 
-    # 2. Planner & Tools
+    # 2. Planner & System Tools
     await test_mock_planner_open_vscode()
     await test_mock_planner_create_folder()
     await test_tool_registration()
@@ -49,23 +52,27 @@ async def run_all_tests():
     await test_stt_provider_interface()
     await test_tts_provider_interface()
     test_device_manager()
-    print("[PASS] Voice provider interfaces & audio device manager tests passed.")
-
-    # 5. Voice Pipeline & Interruptions
     await test_audio_capture_and_mute()
     await test_playback_interruption()
     test_voice_session_context()
     await test_fast_path_stop_talking()
     await test_fast_path_cancel_task()
     await test_voice_permission_confirmation()
+    await test_end_to_end_voice_command_flow()
     print("[PASS] Voice pipeline, speech interruption & voice permission tests passed.")
 
-    # 6. End-to-End Voice Integration
-    await test_end_to_end_voice_command_flow()
-    print("[PASS] End-to-end voice interaction integration test passed.")
+    # 5. Browser Automation Tools & Drivers (Phase 3)
+    await test_browser_driver_navigation()
+    await test_browser_driver_dom_parsing()
+    await test_browser_driver_click_and_type()
+    await test_browser_registered_tools()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        await test_browser_tool_executions(Path(tmpdir))
+    await test_end_to_end_browser_automation_flow()
+    print("[PASS] Browser drivers, DOM parsing, browser tools & E2E browser automation tests passed.")
 
     print("\n--------------------------------------------------")
-    print(" ALL 15 TEST SUITES PASSED SUCCESSFULLY! ")
+    print(" ALL 24 TEST SUITES PASSED SUCCESSFULLY! ")
     print("--------------------------------------------------")
 
 if __name__ == "__main__":
