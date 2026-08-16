@@ -15,7 +15,7 @@ class Settings:
     # Voice Configuration (Phase 2)
     voice_enabled: bool = os.getenv("VOICE_ENABLED", "true").lower() == "true"
     wake_word_enabled: bool = os.getenv("WAKE_WORD_ENABLED", "true").lower() == "true"
-    wake_word: str = os.getenv("WAKE_WORD", "Aura")
+    wake_word: str = os.getenv("WAKE_WORD", "jarves")
     wake_word_sensitivity: float = float(os.getenv("WAKE_WORD_SENSITIVITY", "0.5"))
     stt_provider: str = os.getenv("STT_PROVIDER", "mock")  # mock, local, cloud
     stt_language: str = os.getenv("STT_LANGUAGE", "en-US")
