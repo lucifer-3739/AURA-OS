@@ -47,7 +47,7 @@ async def read_file(path: str) -> Dict[str, Any]:
     if not p.exists() or not p.is_file():
         return {"success": False, "error": f"File not found: {path}"}
     with open(p, "r", encoding="utf-8", errors="replace") as f:
-        content = f.read()
+        content = f.read(8000)
     return {"success": True, "path": str(p), "content": content}
 
 # 3. write_file
@@ -68,6 +68,7 @@ async def read_file(path: str) -> Dict[str, Any]:
 )
 async def write_file(path: str, content: str) -> Dict[str, Any]:
     p = Path(path).resolve()
+    p.parent.mkdir(parents=True, exist_ok=True)
     with open(p, "w", encoding="utf-8") as f:
         f.write(content)
     return {"success": True, "path": str(p), "bytes_written": len(content)}
@@ -204,7 +205,7 @@ async def search_files(directory: str, pattern: str) -> Dict[str, Any]:
     risk_level=RiskLevel.SAFE,
     required_permission="filesystem.read"
 )
-async def list_directory(path: str) -> Dict[str, Any]:
+async def list_directory(path: str = ".") -> Dict[str, Any]:
     p = Path(path).resolve()
     if not p.exists() or not p.is_dir():
         return {"success": False, "error": f"Directory not found: {path}"}
@@ -216,3 +217,62 @@ async def list_directory(path: str) -> Dict[str, Any]:
             "size": item.stat().st_size if item.is_file() else 0
         })
     return {"success": True, "path": str(p), "items": items}
+
+# 10. organize_folder
+@registry.register(
+    name="organize_folder",
+    description="Organize files in a folder into subdirectories based on their file extensions.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "folder_path": {"type": "string", "description": "Directory path containing files to organize"}
+        },
+        "required": ["folder_path"]
+    },
+    risk_level=RiskLevel.MODERATE,
+    required_permission="filesystem.write"
+)
+async def organize_folder(folder_path: str) -> Dict[str, Any]:
+    resolved_path = os.path.abspath(folder_path)
+    if not os.path.exists(resolved_path) or not os.path.isdir(resolved_path):
+        return {"success": False, "error": f"Directory does not exist or is not a folder: {folder_path}"}
+
+    category_map = {
+        "Images": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg", ".ico"],
+        "Documents": [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".csv", ".json"],
+        "Audio": [".mp3", ".wav", ".m4a", ".flac", ".wma"],
+        "Video": [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv"],
+        "Archives": [".zip", ".rar", ".7z", ".tar", ".gz"]
+    }
+
+    items = os.listdir(resolved_path)
+    moved_counts = {}
+
+    for item in items:
+        item_path = os.path.join(resolved_path, item)
+        if os.path.isdir(item_path):
+            continue
+            
+        file_name, file_ext = os.path.splitext(item)
+        file_ext = file_ext.lower()
+        
+        target_category = None
+        for category, extensions in category_map.items():
+            if file_ext in extensions:
+                target_category = category
+                break
+                
+        if not target_category:
+            target_category = "Others"
+
+        dest_folder = os.path.join(resolved_path, target_category)
+        os.makedirs(dest_folder, exist_ok=True)
+        
+        dest_file_path = os.path.join(dest_folder, item)
+        shutil.move(item_path, dest_file_path)
+        moved_counts[target_category] = moved_counts.get(target_category, 0) + 1
+
+    if not moved_counts:
+        return {"success": True, "message": f"No files were found in '{resolved_path}' to organize.", "moved_counts": {}}
+        
+    return {"success": True, "path": resolved_path, "moved_counts": moved_counts}

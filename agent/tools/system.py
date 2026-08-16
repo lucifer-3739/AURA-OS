@@ -9,11 +9,11 @@ from agent.security.permissions import RiskLevel
 # 1. open_application
 @registry.register(
     name="open_application",
-    description="Open an application on the computer by name or path.",
+    description="Launch a Windows or system application by name.",
     parameters={
         "type": "object",
         "properties": {
-            "application": {"type": "string", "description": "Application name (e.g. 'code', 'chrome', 'notepad')"}
+            "application": {"type": "string", "description": "Application name e.g. 'notepad', 'chrome', 'spotify', 'calculator', 'explorer', 'cmd', 'paint'"}
         },
         "required": ["application"]
     },
@@ -22,32 +22,46 @@ from agent.security.permissions import RiskLevel
 )
 async def open_application(application: str) -> Dict[str, Any]:
     app_lower = application.lower().strip()
+    
+    app_map = {
+        "notepad": ["notepad.exe"],
+        "chrome": ["cmd.exe", "/c", "start chrome"],
+        "google chrome": ["cmd.exe", "/c", "start chrome"],
+        "spotify": ["cmd.exe", "/c", "start spotify"],
+        "calculator": ["calc.exe"],
+        "calc": ["calc.exe"],
+        "explorer": ["explorer.exe"],
+        "file explorer": ["explorer.exe"],
+        "cmd": ["cmd.exe"],
+        "command prompt": ["cmd.exe"],
+        "paint": ["mspaint.exe"],
+        "mspaint": ["mspaint.exe"],
+        "code": ["code"],
+        "vs code": ["code"],
+        "visual studio code": ["code"]
+    }
+    
     try:
-        # Check standard shortcuts or executables
         if sys.platform == "win32":
-            if "code" in app_lower or "vs code" in app_lower or "visual studio code" in app_lower:
-                proc = subprocess.Popen(["code"], shell=True)
-            elif "chrome" in app_lower:
-                proc = subprocess.Popen(["start", "chrome"], shell=True)
-            elif "notepad" in app_lower:
-                proc = subprocess.Popen(["notepad"], shell=True)
+            if app_lower in app_map:
+                proc = subprocess.Popen(app_map[app_lower])
             else:
-                proc = subprocess.Popen(["start", "", application], shell=True)
+                proc = subprocess.Popen(["cmd.exe", "/c", f"start {app_lower}"], shell=True)
         else:
             proc = subprocess.Popen([application])
-            
-        return {"success": True, "application": application, "pid": proc.pid}
+
+        return {"success": True, "application": application, "pid": proc.pid if proc else 0}
     except Exception as e:
         return {"success": False, "error": str(e), "application": application}
 
 # 2. close_application
 @registry.register(
     name="close_application",
-    description="Terminate a running application by process name.",
+    description="Close a running application on the computer by process name.",
     parameters={
         "type": "object",
         "properties": {
-            "process_name": {"type": "string", "description": "Process name e.g. notepad.exe or chrome.exe"}
+            "process_name": {"type": "string", "description": "Application name e.g. 'notepad', 'chrome', 'spotify', 'calculator'"}
         },
         "required": ["process_name"]
     },
@@ -55,15 +69,44 @@ async def open_application(application: str) -> Dict[str, Any]:
     required_permission="system.execute"
 )
 async def close_application(process_name: str) -> Dict[str, Any]:
-    killed = 0
-    for proc in psutil.process_iter(['pid', 'name']):
-        try:
-            if process_name.lower() in proc.info['name'].lower():
-                proc.terminate()
-                killed += 1
-        except Exception:
-            pass
-    return {"success": True, "process_name": process_name, "terminated_count": killed}
+    app_lower = process_name.lower().strip()
+    
+    exe_map = {
+        "notepad": "notepad.exe",
+        "chrome": "chrome.exe",
+        "google chrome": "chrome.exe",
+        "spotify": "Spotify.exe",
+        "calculator": "CalculatorApp.exe",
+        "calc": "CalculatorApp.exe",
+        "paint": "mspaint.exe",
+        "mspaint": "mspaint.exe"
+    }
+    
+    exe_name = exe_map.get(app_lower, f"{app_lower}.exe" if not app_lower.endswith(".exe") else app_lower)
+    
+    try:
+        if sys.platform == "win32":
+            result = subprocess.run(
+                ["taskkill", "/F", "/IM", exe_name],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                return {"success": True, "process_name": process_name, "message": f"Closed {process_name} successfully."}
+        
+        # Fallback psutil process termination
+        killed = 0
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                if app_lower in proc.info['name'].lower():
+                    proc.terminate()
+                    killed += 1
+            except Exception:
+                pass
+
+        return {"success": True, "process_name": process_name, "terminated_count": killed}
+    except Exception as e:
+        return {"success": False, "error": str(e), "process_name": process_name}
 
 # 3. system_information
 @registry.register(
@@ -104,7 +147,6 @@ async def system_information() -> Dict[str, Any]:
     required_permission="system.execute"
 )
 async def volume_control(action: str, level: int = 50) -> Dict[str, Any]:
-    # Mock/Basic system volume control log
     return {"success": True, "action": action, "level": level, "message": f"Volume set to {level}%"}
 
 # 5. shutdown

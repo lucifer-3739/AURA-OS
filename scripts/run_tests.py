@@ -6,7 +6,7 @@ from pathlib import Path
 root_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(root_dir))
 
-from tests.test_tools import test_tool_registration, test_create_and_read_file
+from tests.test_tools import test_tool_registration, test_create_and_read_file, test_organize_folder, test_capture_camera
 from tests.test_permissions import test_permission_risk_levels
 from tests.test_planner import test_mock_planner_open_vscode, test_mock_planner_create_folder
 from tests.test_orchestrator import test_orchestrator_execution_flow
@@ -41,7 +41,9 @@ async def run_all_tests():
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
         await test_create_and_read_file(Path(tmpdir))
-    print("[PASS] AI planner & filesystem tools tests passed.")
+        await test_organize_folder(Path(tmpdir))
+        await test_capture_camera(Path(tmpdir) / "cam.jpg")
+    print("[PASS] AI planner, camera capture, folder organizer & filesystem tools tests passed.")
 
     # 3. Orchestrator
     await test_orchestrator_execution_flow()
@@ -72,7 +74,7 @@ async def run_all_tests():
     print("[PASS] Browser drivers, DOM parsing, browser tools & E2E browser automation tests passed.")
 
     print("\n--------------------------------------------------")
-    print(" ALL 24 TEST SUITES PASSED SUCCESSFULLY! ")
+    print(" ALL 26 TEST SUITES PASSED SUCCESSFULLY! ")
     print("--------------------------------------------------")
 
 if __name__ == "__main__":
